@@ -5,6 +5,13 @@ import click
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
+import mlflow
+
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+EXPERIMENT_NAME = "random-forest-base"
+mlflow.set_experiment(EXPERIMENT_NAME)
+mlflow.sklearn.autolog(disable=False)
+
 
 def load_pickle(filename: str):
     with open(filename, "rb") as f_in:
@@ -15,19 +22,24 @@ def load_pickle(filename: str):
 @click.option(
     "--data_path",
     default="./output",
-    help="Location where the processed NYC taxi trip data was saved"
+    help="Location where the processed NYC taxi trip data was saved",
 )
 def run_train(data_path: str):
+    with mlflow.start_run():
+        X_train, y_train = load_pickle(os.path.join(data_path, "train.pkl"))
+        X_val, y_val = load_pickle(os.path.join(data_path, "val.pkl"))
 
-    X_train, y_train = load_pickle(os.path.join(data_path, "train.pkl"))
-    X_val, y_val = load_pickle(os.path.join(data_path, "val.pkl"))
+        rf = RandomForestRegressor(max_depth=10, random_state=0)
+        rf.fit(X_train, y_train)
+        y_pred_train = rf.predict(X_train)
+        rmse_train = mean_squared_error(y_train, y_pred_train, squared=False)
+        print("RMSE base train: {:.4f}".format(rmse_train))
 
-    rf = RandomForestRegressor(max_depth=10, random_state=0)
-    rf.fit(X_train, y_train)
-    y_pred = rf.predict(X_val)
+        y_pred = rf.predict(X_val)
 
-    rmse = mean_squared_error(y_val, y_pred, squared=False)
+        rmse = mean_squared_error(y_val, y_pred, squared=False)
+        print("RMSE base valid: {:.4f}".format(rmse))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_train()
