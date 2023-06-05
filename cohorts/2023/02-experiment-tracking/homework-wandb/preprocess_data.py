@@ -1,11 +1,15 @@
 import os
 import pickle
 import click
+import ruamel.yaml as YAML
 import pandas as pd
 
 import wandb
 
 from sklearn.feature_extraction import DictVectorizer
+
+with open("config.yaml") as f:
+    DEFAULT_PARAMS = YAML.load(f)
 
 
 def dump_pickle(obj, filename: str):
@@ -82,12 +86,14 @@ def run_data_prep(
     os.makedirs(dest_path, exist_ok=True)
 
     # Save DictVectorizer and datasets
-    dump_pickle(dv, os.path.join(dest_path, "dv.pkl"))
+    dv_name = DEFAULT_PARAMS["dict_vectorizer_name"]
+    dump_pickle(dv, os.path.join(dest_path, dv_name))
     dump_pickle((X_train, y_train), os.path.join(dest_path, "train.pkl"))
     dump_pickle((X_val, y_val), os.path.join(dest_path, "val.pkl"))
     dump_pickle((X_test, y_test), os.path.join(dest_path, "test.pkl"))
 
-    artifact = wandb.Artifact("NYC-Taxi", type="preprocessed_dataset")
+    artifact_name = DEFAULT_PARAMS["artifact_name"]
+    artifact = wandb.Artifact(artifact_name, type="preprocessed_dataset")
     artifact.add_dir(dest_path)
     wandb.log_artifact(artifact)
 

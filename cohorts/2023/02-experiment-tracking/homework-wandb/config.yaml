@@ -1,0 +1,9 @@
+project_name: mlops-zoomcamp-hw2
+data_folder: data
+output_folder: output
+entity: ayeffkay
+dict_vectorizer_name: dv.pkl
+artifact_name: NYC-Taxi
+train_artifact_name: NYC-Taxi-train
+model_file: regressor.pkl
+

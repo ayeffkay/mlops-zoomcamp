@@ -8,6 +8,8 @@ import wandb
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
+from preprocess_data import DEFAULT_PARAMS
+
 
 def load_pickle(filename: str):
     with open(filename, "rb") as f_in:
@@ -26,19 +28,25 @@ def run_train(data_artifact: str):
     X_val, y_val = load_pickle(os.path.join(data_path, "val.pkl"))
 
     # Define the XGBoost Regressor Mode, train the model and perform prediction
-    # TODO: Pass the parameters n_estimators, min_samples_split, min_samples_leaf from `config` to `RandomForestRegressor`
-    rf = RandomForestRegressor(max_depth=config.max_depth, random_state=0)
+    # DONE: Pass the parameters n_estimators, min_samples_split, min_samples_leaf from `config` to `RandomForestRegressor`
+    rf = RandomForestRegressor(
+        max_depth=config.max_depth,
+        n_estimators=config.n_estimators,
+        min_samples_split=config.min_samples_split,
+        min_samples_leaf=config.min_samples_leaf,
+        random_state=0,
+    )
     rf.fit(X_train, y_train)
     y_pred = rf.predict(X_val)
 
     mse = mean_squared_error(y_val, y_pred, squared=False)
     wandb.log({"MSE": mse})
-
-    with open("regressor.pkl", "wb") as f:
+    model_file = DEFAULT_PARAMS["model_file"]
+    with open(model_file, "wb") as f:
         pickle.dump(rf, f)
 
     artifact = wandb.Artifact(f"{wandb.run.id}-model", type="model")
-    artifact.add_file("regressor.pkl")
+    artifact.add_file(model_file)
     wandb.log_artifact(artifact)
 
 
