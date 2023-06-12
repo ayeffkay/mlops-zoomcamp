@@ -1,0 +1,49 @@
+###
+### A complete description of a Prefect Deployment for flow 'MAIN'
+###
+name: Q2-Q3
+description: Scheduled deployment
+version: '0'
+# The work queue that will handle this deployment's runs
+work_queue_name: default
+work_pool_name: mlops-zoomcamp
+tags: []
+parameters:
+  train_path: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-01.parquet
+  val_path: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-02.parquet
+  send_email: false
+schedule:
+  cron: 0 9 3 * *
+  timezone: null
+  day_or: true
+is_schedule_active: null
+infra_overrides: {}
+
+###
+### DO NOT EDIT BELOW THIS LINE
+###
+flow_name: MAIN
+manifest_path: null
+infrastructure:
+  type: process
+  env: {}
+  labels: {}
+  name: null
+  command: null
+  stream_output: true
+  working_dir: null
+  block_type_slug: process
+  _is_anonymous: true
+  _block_document_name: anonymous-65bc6bc1-dc1b-43c2-8c25-3897135de673
+  _block_document_id: 208eb5ba-b320-4d59-9732-a47e36d90e33
+  _block_type_slug: process
+storage: null
+path: null
+entrypoint: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration
+parameter_openapi_schema:
+  title: Parameters
+  type: object
+  properties: {}
+  required: null
+  definitions: null
+timestamp: '2023-06-12T18:10:13.738109+00:00'

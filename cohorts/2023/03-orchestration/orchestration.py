@@ -1,5 +1,10 @@
+from typing import Union, Dict, Any
 import pathlib
 import pickle
+import time
+from datetime import date
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import scipy
@@ -8,11 +13,19 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import mean_squared_error
 import mlflow
 import xgboost as xgb
+
 from prefect import flow, task
+from prefect.deployments import Deployment
 from prefect.artifacts import create_markdown_artifact
-from datetime import date
+from prefect_email import EmailServerCredentials, email_send_message
+from prefect.context import get_run_context
+from prefect.server.schemas.schedules import CronSchedule
+from prefect.deployments import run_deployment
+
+CUR_PATH = Path(__file__).parent.resolve()
 
 
+### Q1 ###
 @task(retries=3, retry_delay_seconds=2, name="Read taxi data")
 def read_data(filename: str) -> pd.DataFrame:
     """Read data into DataFrame"""
@@ -30,6 +43,38 @@ def read_data(filename: str) -> pd.DataFrame:
     df[categorical] = df[categorical].astype(str)
 
     return df
+
+
+### Q5, Q6
+# prefect cloud workspace set --workspace "mlops-zoomcamp"
+###
+@flow(name="Exception email", log_prints=True)
+def send_exception_email(exc):
+    context = get_run_context()
+    flow_run_name = context.flow_run.name
+    email_server_credentials = EmailServerCredentials.load("email-credentials")
+    email_send_message(
+        email_server_credentials=email_server_credentials,
+        subject=f"Flow run {flow_run_name!r} failed",
+        msg=f"Flow run {flow_run_name!r} failed due to {exc}.",
+        email_to=email_server_credentials.username,
+    )
+
+
+### Q5, Q6
+# prefect cloud workspace set --workspace "mlops-zoomcamp"
+###
+@flow(name="Succeed email", log_prints=True)
+def send_ok_email():
+    context = get_run_context()
+    flow_run_name = context.flow_run.name
+    email_server_credentials = EmailServerCredentials.load("email-credentials")
+    email_send_message(
+        email_server_credentials=email_server_credentials,
+        subject=f"Flow run {flow_run_name!r} succeeded",
+        msg=f"Flow run {flow_run_name!r} succeeded.",
+        email_to=email_server_credentials.username,
+    )
 
 
 @task
@@ -119,37 +164,108 @@ def train_best_model(
 
         | Region    | RMSE |
         |:----------|-------:|
-        | {date.today()} | {rmse:.2f} |
+        | {date.today()} | {rmse:.5f} |
         """
-
+        ### Q4 ###
         create_markdown_artifact(
             key="duration-model-report", markdown=markdown__rmse_report
         )
 
-    return None
+    return rmse
 
 
-@flow
+@flow(name="MAIN")
 def main_flow(
-    train_path: str = "./data/green_tripdata_2023-01.parquet",
-    val_path: str = "./data/green_tripdata_2023-02.parquet",
+    train_path: Union[str, pathlib.PosixPath] = CUR_PATH
+    / "data/green_tripdata_2023-01.parquet",
+    val_path: Union[str, pathlib.PosixPath] = CUR_PATH
+    / "data/green_tripdata_2023-02.parquet",
+    send_email: bool = False,
 ) -> None:
     """The main training pipeline"""
+    try:
+        # MLflow settings
+        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+        mlflow.set_experiment("nyc-taxi-experiment")
 
-    # MLflow settings
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
-    mlflow.set_experiment("nyc-taxi-experiment")
+        # Load
+        df_train = read_data(str(train_path))
+        df_val = read_data(str(val_path))
 
-    # Load
-    df_train = read_data(train_path)
-    df_val = read_data(val_path)
+        # Transform
+        X_train, X_val, y_train, y_val, dv = add_features(df_train, df_val)
 
-    # Transform
-    X_train, X_val, y_train, y_val, dv = add_features(df_train, df_val)
+        # Train
+        train_best_model(X_train, X_val, y_train, y_val, dv)
+        if send_email:
+            send_ok_email()
+    except Exception as exc:
+        if send_email:
+            send_exception_email(exc)
 
-    # Train
-    train_best_model(X_train, X_val, y_train, y_val, dv)
+
+def apply_deployment(deployment_kwargs: Dict[str, Any]):
+    deployment = Deployment(**deployment_kwargs)
+    deployment.apply()
+    deployment_name = f"{deployment.flow_name}/{deployment.name}"
+    # response = run_deployment(deployment_name)
+    # print(response)
+
+
+@flow(name="q2_q3")
+def q2_q3(train_path, val_path):
+    main_flow(train_path, val_path)
+
+
+@flow(name="q4_q5")
+def q4_q5(train_path, val_path):
+    main_flow(train_path, val_path)
 
 
 if __name__ == "__main__":
-    main_flow()
+    train_1_path = CUR_PATH / "data/green_tripdata_2023-01.parquet"
+    train_2_path = CUR_PATH / "data/green_tripdata_2023-02.parquet"
+    val_1_path = train_2_path
+    val_2_path = CUR_PATH / "data/green_tripdata_2023-03.parquet"
+
+    ### Q1 ###
+    main_flow(train_path=train_1_path, val_path=val_1_path, send_email=False)
+    main_flow(train_path=train_2_path, val_path=val_2_path, send_email=False)
+    time.sleep(10)
+
+    deployment_kwargs = dict(
+        version=0,
+        flow_name="MAIN",
+        work_pool_name="mlops-zoomcamp",
+    )
+
+    ### Q2, Q3 ###
+    q2_q3(train_1_path, val_1_path)
+    deployment_kwargs_q2_q3 = dict(
+        name="Q2-Q3",
+        parameters={
+            "train_path": train_1_path,
+            "val_path": val_1_path,
+            "send_email": False,
+        },
+        schedule=CronSchedule(cron="0 9 3 * *"),
+        description="Scheduled deployment",
+    )
+    deployment_kwargs_q2_q3.update(deployment_kwargs)
+    apply_deployment(deployment_kwargs_q2_q3)
+
+    time.sleep(10)
+
+    ### Q4, Q5 ###
+    q4_q5(train_2_path, val_2_path)
+    deployment_kwargs_q4_q5 = dict(
+        name="Q4-Q5",
+        parameters={
+            "train_path": train_2_path,
+            "val_path": val_2_path,
+            "send_email": True,
+        },
+        description="Notifications",
+    )
+    deployment_kwargs_q4_q5.update(deployment_kwargs)
+    apply_deployment(deployment_kwargs_q4_q5)
