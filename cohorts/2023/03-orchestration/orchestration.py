@@ -46,7 +46,6 @@ def read_data(filename: str) -> pd.DataFrame:
 
 
 ### Q5, Q6
-# prefect cloud workspace set --workspace "mlops-zoomcamp"
 ###
 @flow(name="Exception email", log_prints=True)
 def send_exception_email(exc):
@@ -62,7 +61,6 @@ def send_exception_email(exc):
 
 
 ### Q5, Q6
-# prefect cloud workspace set --workspace "mlops-zoomcamp"
 ###
 @flow(name="Succeed email", log_prints=True)
 def send_ok_email():
@@ -197,6 +195,7 @@ def main_flow(
 
         # Train
         train_best_model(X_train, X_val, y_train, y_val, dv)
+        ### Q5, Q6 - sending emails ###
         if send_email:
             send_ok_email()
     except Exception as exc:
