@@ -22,7 +22,6 @@ from prefect_email import EmailServerCredentials, email_send_message
 from prefect.context import get_run_context
 from prefect.server.schemas.schedules import CronSchedule
 from prefect.deployments import run_deployment
-from prefect.triggers import all_successful, all_failed
 
 CUR_PATH = Path(__file__).parent.resolve()
 EMAIL_CREDENTIALS = os.getenv("EMAIL_CREDENTIALS", "email-credentials")
