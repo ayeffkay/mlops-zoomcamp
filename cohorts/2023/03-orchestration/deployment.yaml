@@ -1,14 +1,17 @@
 deployments:
-- name: null
-  version: null
-  tags: []
+- name: "Q2"
+  version: 1
+  tags: ["scheduling"]
   description: null
   schedule:
     cron: 0 9 3 * *
-  flow_name: null
-  entrypoint: null
-  parameters: {}
+  flow_name: "main_flow"
+  entrypoint: "orchestration.py:main_flow"
+  parameters: {
+    "train_path": "/home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-01.parquet", 
+    "val_path": "/home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-02.parquet"
+  }
   work_pool:
-    name: null
+    name: "mlops-zoomcamp"
     work_queue_name: null
     job_variables: {}

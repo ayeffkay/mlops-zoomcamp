@@ -1,5 +1,5 @@
 ###
-### A complete description of a Prefect Deployment for flow 'MAIN'
+### A complete description of a Prefect Deployment for flow 'main_flow'
 ###
 name: Q2-Q3
 description: Scheduled deployment
@@ -9,8 +9,8 @@ work_queue_name: default
 work_pool_name: mlops-zoomcamp
 tags: []
 parameters:
-  train_path: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-01.parquet
-  val_path: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration/data/green_tripdata_2023-02.parquet
+  train_path: data/green_tripdata_2023-01.parquet
+  val_path: data/green_tripdata_2023-02.parquet
   send_email: false
 schedule:
   cron: 0 9 3 * *
@@ -22,7 +22,7 @@ infra_overrides: {}
 ###
 ### DO NOT EDIT BELOW THIS LINE
 ###
-flow_name: MAIN
+flow_name: main_flow
 manifest_path: null
 infrastructure:
   type: process
@@ -34,16 +34,16 @@ infrastructure:
   working_dir: null
   block_type_slug: process
   _is_anonymous: true
-  _block_document_name: anonymous-65bc6bc1-dc1b-43c2-8c25-3897135de673
-  _block_document_id: 208eb5ba-b320-4d59-9732-a47e36d90e33
+  _block_document_name: anonymous-1368356f-8a34-4e6d-be25-3e729b83ef3e
+  _block_document_id: 6bd34aca-c4d8-4ae9-8d31-e3d27c9cacad
   _block_type_slug: process
 storage: null
-path: null
-entrypoint: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration
+path: /home/alina/mlops-zoomcamp/cohorts/2023/03-orchestration
+entrypoint: orchestration.py:main_flow
 parameter_openapi_schema:
   title: Parameters
   type: object
   properties: {}
   required: null
   definitions: null
-timestamp: '2023-06-12T18:10:13.738109+00:00'
+timestamp: '2023-06-17T12:07:42.456811+00:00'

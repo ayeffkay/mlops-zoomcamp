@@ -4,6 +4,7 @@ import pickle
 import time
 from datetime import date
 from pathlib import Path
+import os
 
 import pandas as pd
 import numpy as np
@@ -21,8 +22,11 @@ from prefect_email import EmailServerCredentials, email_send_message
 from prefect.context import get_run_context
 from prefect.server.schemas.schedules import CronSchedule
 from prefect.deployments import run_deployment
+from prefect.triggers import all_successful, all_failed
 
 CUR_PATH = Path(__file__).parent.resolve()
+EMAIL_CREDENTIALS = os.getenv("EMAIL_CREDENTIALS", "email-credentials")
+WORK_POOL_NAME = os.getenv("WORK_POOL_NAME", "mlops-zoomcamp")
 
 
 ### Q1 ###
@@ -51,7 +55,7 @@ def read_data(filename: str) -> pd.DataFrame:
 def send_exception_email(exc):
     context = get_run_context()
     flow_run_name = context.flow_run.name
-    email_server_credentials = EmailServerCredentials.load("email-credentials")
+    email_server_credentials = EmailServerCredentials.load(EMAIL_CREDENTIALS)
     email_send_message(
         email_server_credentials=email_server_credentials,
         subject=f"Flow run {flow_run_name!r} failed",
@@ -66,7 +70,7 @@ def send_exception_email(exc):
 def send_ok_email():
     context = get_run_context()
     flow_run_name = context.flow_run.name
-    email_server_credentials = EmailServerCredentials.load("email-credentials")
+    email_server_credentials = EmailServerCredentials.load(EMAIL_CREDENTIALS)
     email_send_message(
         email_server_credentials=email_server_credentials,
         subject=f"Flow run {flow_run_name!r} succeeded",
@@ -172,7 +176,7 @@ def train_best_model(
     return rmse
 
 
-@flow(name="MAIN")
+@flow
 def main_flow(
     train_path: Union[str, pathlib.PosixPath] = CUR_PATH
     / "data/green_tripdata_2023-01.parquet",
@@ -203,43 +207,46 @@ def main_flow(
             send_exception_email(exc)
 
 
-def apply_deployment(deployment_kwargs: Dict[str, Any]):
+def apply_and_run_deployment(deployment_kwargs: Dict[str, Any]):
     deployment = Deployment(**deployment_kwargs)
     deployment.apply()
+    deployment.to_yaml(f"{deployment.flow_name}-{deployment.name}.yaml")
     deployment_name = f"{deployment.flow_name}/{deployment.name}"
-    # response = run_deployment(deployment_name)
-    # print(response)
-
-
-@flow(name="q2_q3")
-def q2_q3(train_path, val_path):
-    main_flow(train_path, val_path)
-
-
-@flow(name="q4_q5")
-def q4_q5(train_path, val_path):
-    main_flow(train_path, val_path)
+    response = run_deployment(deployment_name)
+    print(response)
 
 
 if __name__ == "__main__":
-    train_1_path = CUR_PATH / "data/green_tripdata_2023-01.parquet"
-    train_2_path = CUR_PATH / "data/green_tripdata_2023-02.parquet"
+    """
+    The code below is implemented for prefect-cloud
+    To check all is work you need to: 1) login prefect cloud account, create workspace and set it locally
+                                      2) create pool and start it locally `prefect agent start --pool $WORK_POOL_NAME`
+                                        (pool name can be set via `export WORK_POOL_NAME=your_pool_name`)
+                                      3) create e-mail credentials block for notifications (see `create_prefect_email_block.py`)
+                                        (e-mail credentials can be set via `export EMAIL_CREDENTIALS=your_email_credentials_block_name`)
+                                      4) run `python orchestration.py` in the new window
+    """
+    train_1_path = "data/green_tripdata_2023-01.parquet"
+    train_2_path = "data/green_tripdata_2023-02.parquet"
     val_1_path = train_2_path
-    val_2_path = CUR_PATH / "data/green_tripdata_2023-03.parquet"
+    val_2_path = "data/green_tripdata_2023-03.parquet"
 
     ### Q1 ###
     main_flow(train_path=train_1_path, val_path=val_1_path, send_email=False)
+    # just to check flow
     main_flow(train_path=train_2_path, val_path=val_2_path, send_email=False)
     time.sleep(10)
 
     deployment_kwargs = dict(
         version=0,
-        flow_name="MAIN",
-        work_pool_name="mlops-zoomcamp",
+        flow_name="main_flow",
+        work_pool_name=WORK_POOL_NAME,
+        path=str(CUR_PATH),
+        entrypoint="orchestration.py:main_flow",
     )
 
     ### Q2, Q3 ###
-    q2_q3(train_1_path, val_1_path)
+
     deployment_kwargs_q2_q3 = dict(
         name="Q2-Q3",
         parameters={
@@ -251,12 +258,12 @@ if __name__ == "__main__":
         description="Scheduled deployment",
     )
     deployment_kwargs_q2_q3.update(deployment_kwargs)
-    apply_deployment(deployment_kwargs_q2_q3)
+    apply_and_run_deployment(deployment_kwargs_q2_q3)
 
     time.sleep(10)
 
     ### Q4, Q5 ###
-    q4_q5(train_2_path, val_2_path)
+
     deployment_kwargs_q4_q5 = dict(
         name="Q4-Q5",
         parameters={
@@ -267,4 +274,4 @@ if __name__ == "__main__":
         description="Notifications",
     )
     deployment_kwargs_q4_q5.update(deployment_kwargs)
-    apply_deployment(deployment_kwargs_q4_q5)
+    apply_and_run_deployment(deployment_kwargs_q4_q5)
