@@ -43,6 +43,7 @@ def read_data(filename: str, categorical: List[str]):
     else:
         df = pd.read_parquet(filename)
     df = prepare_data(df, categorical)
+    print("TEST BATCH SHAPE: ", df.shape)
     return df
 
 
