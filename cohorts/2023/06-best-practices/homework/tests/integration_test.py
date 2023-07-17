@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import pandas as pd
 
 S3_NAME = os.getenv("S3_BUCKET_NAME", "nyc-duration")
@@ -18,6 +19,9 @@ def save_df(input_file: str, year: int, month: int):
         index=False,
         storage_options=options,
     )
+
+    run_str = f"aws --endpoint-url={S3_ENDPOINT_URL} s3 ls s3://{S3_NAME}/in --recursive --human-readable --summarize"
+    subprocess.run(run_str.split(" "))
 
 
 if __name__ == "__main__":
