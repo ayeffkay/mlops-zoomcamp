@@ -1,0 +1,8 @@
+FROM python:3.10.0-slim
+
+RUN pip install -U pip & pip install pipenv
+
+COPY [ "Pipfile", "Pipfile.lock", "/tmp/" ]
+
+RUN cd /tmp && pipenv install --system --deploy
+RUN export $(xargs <docker-env/backend.env)

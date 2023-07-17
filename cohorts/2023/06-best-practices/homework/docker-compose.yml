@@ -5,13 +5,29 @@ services:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
     image: localstack/localstack
     ports:
-      - "127.0.0.1:4566:4566"
-      - "127.0.0.1:4510-4559:4510-4559"
-    command: sh -c "aws --endpoint-url=http://localhost:4566 s3 mb s3://nyc-duration && 
-                aws --endpoint-url=http://localhost:4566 s3 ls"
+      - "4566:4566"
+      - "4510-4559:4510-4559"
     env_file:
-      - localstack.env
+      - ./docker-env/localstack.env
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
+  backend:
+    container_name: nyc-duration
+    image: nyc-duration:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./docker-env/backend.env
+    depends_on:
+      - localstack
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.backend
+    working_dir: /app
+    command: sh -c "aws --endpoint-url=http://localstack:4566 s3 mb s3://nyc-duration \
+                    && pytest tests/test_batch.py \
+                    && python tests/integration_test.py output/test_df.csv 2022 1 \
+                    && python batch.py 2022 1" 
+    volumes:
       - "./:/app"

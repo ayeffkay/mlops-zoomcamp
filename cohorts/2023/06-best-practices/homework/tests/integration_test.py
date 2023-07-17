@@ -2,7 +2,7 @@ import os
 import sys
 import pandas as pd
 
-S3_NAME = os.getenv("S3_NAME", "nyc-duration")
+S3_NAME = os.getenv("S3_BUCKET_NAME", "nyc-duration")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "http://localhost:4566")
 
 

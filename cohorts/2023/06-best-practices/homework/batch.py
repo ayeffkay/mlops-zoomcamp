@@ -7,7 +7,7 @@ import pathlib
 import pickle
 import pandas as pd
 
-S3_NAME = os.getenv("S3_NAME", "nyc-duration")
+S3_NAME = os.getenv("S3_BUCKET_NAME", "nyc-duration")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "http://localhost:4566")
 CUR_PATH = pathlib.Path(__file__).parent.resolve()
 
@@ -73,6 +73,7 @@ def main(year: int, month: int):
     with open(CUR_PATH / "model.bin", "rb") as f_in:
         dv, lr = pickle.load(f_in)
 
+    print(input_file)
     df = read_data(input_file, categorical)
     df["ride_id"] = f"{year:04d}/{month:02d}_" + df.index.astype("str")
 

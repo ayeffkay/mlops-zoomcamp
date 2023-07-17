@@ -75,6 +75,7 @@ def test_prepare_data(data: List[Tuple[Any]], columns: List[str]):
             "duration",
         ],
     )
+    print("TEST BATCH SHAPE: ", expected_df.shape)
     Path(f"{ROOT_DIR}/output").mkdir(parents=True, exist_ok=True)
     expected_df.to_csv(f"{ROOT_DIR}/output/test_df.csv")
 
